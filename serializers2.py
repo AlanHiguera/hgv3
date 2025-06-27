@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import Producto, Persona, Usuario, Administrador, Venta, ProductoDeseado, tipoCategoria, Carrito, Tienda, SeguimientoTienda
+from api.models import Producto, Client, Venta, VentaProducto, Person
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 
@@ -9,46 +9,28 @@ class ProductoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('created_at',)
 
-class UsuarioSerializer(serializers.ModelSerializer):
+class ClientSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Usuario
-        fields = '__all__'
-
-class AdministradorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Administrador
+        model = Client
         fields = '__all__'
 
 class VentaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Venta
         fields = '__all__'
-
-class ProductoDeseadoSerializer(serializers.ModelSerializer):
+        extra_kwargs = {
+            'fecha': {'read_only': True, 'required': False},
+            # 'fecha': {'read_only': True},
+        }        
+class VentaProductoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ProductoDeseado
+        model = VentaProducto
         fields = '__all__'
 
-class tipoCategoriaSerializer(serializers.ModelSerializer):
+class PersonSerializer(serializers.ModelSerializer):
     class Meta:
-        model = tipoCategoria
+        model = Person
         fields = '__all__'
-
-class CarritoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Carrito
-        fields = '__all__'
-
-class TiendaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tienda
-        fields = '__all__'
-
-class SeguimientoTiendaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SeguimientoTienda
-        fields = '__all__'
-
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

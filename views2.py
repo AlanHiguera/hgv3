@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions
-from api.models import Producto, Usuario, Administrador, Venta, ProductoDeseado, tipoCategoria, Carrito, Tienda, SeguimientoTienda
-from api.serializers import ProductoSerializer, UsuarioSerializer, UserSerializer, AdministradorSerializer, VentaSerializer, ProductoDeseadoSerializer, tipoCategoriaSerializer, CarritoSerializer, TiendaSerializer, SeguimientoTiendaSerializer
+from api.models import Producto, Client, Venta, VentaProducto
+from api.serializers import ProductoSerializer, ClientSerializer, VentaSerializer, VentaProductoSerializer, UserSerializer
 from rest_framework import status,views, response
 from rest_framework import authentication
 from django.contrib.auth.models import User
@@ -15,58 +15,26 @@ class ProductoViewSet(viewsets.ModelViewSet):
     # authentication_classes = [authentication.BasicAuthentication]
     
 
-class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
-    serializer_class = UsuarioSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
-
-class AdministradorViewSet(viewsets.ModelViewSet):
-    queryset = Administrador.objects.all()
-    serializer_class = AdministradorSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
+class ClientViewSet(viewsets.ModelViewSet):
+  queryset = Client.objects.all()  
+  permission_classes = [permissions.AllowAny]
+  serializer_class = ClientSerializer
 
 class VentaViewSet(viewsets.ModelViewSet):
-    queryset = Venta.objects.all()
-    serializer_class = VentaSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
+  queryset = Venta.objects.all()
+  permission_classes = [permissions.IsAuthenticated]
+  authentication_classes = [authentication.TokenAuthentication,]
+  serializer_class = VentaSerializer
 
-class ProductoDeseadoViewSet(viewsets.ModelViewSet):
-    queryset = ProductoDeseado.objects.all()
-    serializer_class = ProductoDeseadoSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
-
-class tipoCategoriaViewSet(viewsets.ModelViewSet):
-    queryset = tipoCategoria.objects.all()
-    serializer_class = tipoCategoriaSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
+class VentaProductoViewSet(viewsets.ModelViewSet):
+  queryset = VentaProducto.objects.all()
+  permission_classes = [permissions.AllowAny]
+  serializer_class = VentaProductoSerializer
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser,]
-    authentication_classes = [authentication.BasicAuthentication,]
-
-class CarritoViewSet(viewsets.ModelViewSet):
-    queryset = Carrito.objects.all()  # Assuming you want to list products in the cart
-    serializer_class = ProductoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [authentication.BasicAuthentication,]
-
-class TiendaViewSet(viewsets.ModelViewSet):
-    queryset = Tienda.objects.all()  # Assuming you want to list products in the store
-    serializer_class = ProductoSerializer
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = [authentication.BasicAuthentication,]
-
-class SeguimientoTiendaViewSet(viewsets.ModelViewSet):
-    queryset = SeguimientoTienda.objects.all()  # Assuming you want to track products in the store
-    serializer_class = ProductoSerializer
-    permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
 
 class LoginView(views.APIView):
