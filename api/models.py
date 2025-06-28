@@ -24,6 +24,7 @@ class Persona(models.Model):
 
 class Usuario(Persona):
     nombre = models.CharField('Nombre', max_length = 100)
+    apellido = models.CharField('Apellido', default="vacio_", max_length = 100)
     foto = models.ImageField(null=True, blank=True, upload_to='fotos/')
 
     def __str__(self):  
@@ -42,7 +43,7 @@ class Venta(models.Model):
 
     
     def __str__(self):
-        return f'{self.venta} to {self.producto}'
+        return f'{self.comprador} compró {self.productoComprado}'
 
     class Meta:
         indexes = [
@@ -91,7 +92,9 @@ class Carrito(models.Model):
     valortotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return f'{self.usuario} tiene {self.cantidad} de {self.producto} en el carrito'
+        return f'{self.usuario} tiene {self.unidades} de {self.producto} en el carrito'
+    
+
     
     class Meta:
         indexes = [

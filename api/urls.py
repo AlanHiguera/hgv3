@@ -1,5 +1,5 @@
 from rest_framework import routers
-from api.views import ProductoViewSet, UsuarioViewSet, UserViewSet, LogoutView , LoginView, AdministradorViewSet, VentaViewSet, ProductoDeseadoViewSet, tipoCategoriaViewSet, CarritoViewSet, TiendaViewSet, SeguimientoTiendaViewSet
+from api.views import ProductoViewSet, UsuarioViewSet, UserViewSet, LogoutView , LoginView, AdministradorViewSet, VentaViewSet, ProductoDeseadoViewSet, tipoCategoriaViewSet, CarritoViewSet, TiendaViewSet, SeguimientoTiendaViewSet, AgAlCarrito
 from rest_framework.authtoken.views import obtain_auth_token
 from django.urls import path
 router  = routers.DefaultRouter()
@@ -19,4 +19,5 @@ urlpatterns = [
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('login/', LoginView.as_view()),
     path('logout/', LogoutView.as_view()),
+    path('api/carrito/agregar/', AgAlCarrito, name='agregar_al_carrito'),
 ] + router.urls

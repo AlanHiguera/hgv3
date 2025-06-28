@@ -53,7 +53,7 @@ class SeguimientoTiendaSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'password', 'groups', 'email']
+        fields = ['id', 'first_name', 'last_name', 'username', 'apellido' , 'password', 'groups', 'email']
          #esconder password
         extra_kwargs = {
             'password': {'write_only': True, 'required': True}

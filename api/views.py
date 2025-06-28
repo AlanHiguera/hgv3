@@ -100,3 +100,36 @@ class LogoutView(views.APIView):
         logout(request)
         # Devolvemos la respuesta al cliente
         return response.Response({'message':'Sessión Cerrada y Token Eliminado !!!!'},status=status.HTTP_200_OK)
+
+#%@api_view(['POST'])
+def AgAlCarrito(request):
+    # Obtén los datos del request (enviados desde Postman)
+    usuario_id = request.data.get('usuario_id')
+    producto_id = request.data.get('producto_id')
+    unidades = request.data.get('unidades', 1)  # Default: 1
+
+    # Valida que existan el usuario y el producto
+    try:
+        usuario = Usuario.objects.get(pk=usuario_id)
+        producto = Producto.objects.get(pk=producto_id)
+    except (Usuario.DoesNotExist, Producto.DoesNotExist):
+        return Response(
+            {'error': 'Usuario o Producto no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Crea o actualiza el item en el carrito
+    item_carrito, creado = Carrito.objects.get_or_create(
+        usuario=usuario,
+        producto=producto,
+        defaults={'unidades': unidades}
+    )
+
+    if not creado:
+        item_carrito.unidades += unidades
+        item_carrito.save()
+
+    return Response(
+        {'mensaje': 'Producto agregado al carrito', 'item_id': item_carrito.id},
+        status=status.HTTP_201_CREATED
+    )
