@@ -6,7 +6,8 @@ from rest_framework import authentication
 from django.contrib.auth.models import User
 from django.contrib.auth import logout ,authenticate, login 
 from rest_framework.authtoken.models import Token
-
+from rest_framework.decorators import action
+from rest_framework.response import Response
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
@@ -21,11 +22,29 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
 
+    @action(detail=False, methods=['get'])
+    def ListaUsuarios(self, request):
+        usuarios = Usuario.objects.all()
+        serializer = self.get_serializer(usuarios, many=True)
+        return Response(serializer.data)
+
 class AdministradorViewSet(viewsets.ModelViewSet):
     queryset = Administrador.objects.all()
     serializer_class = AdministradorSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
+
+    @action(detail=False, methods=['post'])
+    def AutenticacionarAdministrador(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if not username or not password:
+            return Response({'error': 'Debes enviar username y password'}, status=400)
+        try:
+            administrador = Administrador.objects.get(username=username, password=password)
+            return Response({'message': 'Administrador autenticado exitosamente'}, status=200)
+        except Administrador.DoesNotExist:
+            return Response({'error': 'Administrador no encontrado o credenciales incorrectas'}, status=404)
 
 class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.all()
@@ -38,6 +57,67 @@ class ProductoDeseadoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoDeseadoSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
+
+    @action(detail=False, methods=['get'])
+    def ObtenerListaDeseadosPorUsuario(self, request):
+        usuario_id = request.query_params.get('usuario_id')
+        if not usuario_id:
+            return Response({'error': 'Debes enviar usuario_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            productos_deseados = ProductoDeseado.objects.filter(usuario=usuario)
+            serializer = self.get_serializer(productos_deseados, many=True)
+            return Response(serializer.data)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def ObtenerListaUsuariosQueDeseanProducto(self, request, pk=None):
+        producto_id = request.query_params.get('producto_id')
+        if not producto_id:
+            return Response({'error': 'Debes enviar producto_id'}, status=400)
+        try:
+            producto = Producto.objects.get(pk=producto_id)
+            usuarios_desean = ProductoDeseado.objects.filter(producto=producto)
+            serializer = self.get_serializer(usuarios_desean, many=True)
+            return Response(serializer.data)
+        except Producto.DoesNotExist:
+            return Response({'error': 'Producto no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=False, methods=['post'])
+    def AgregarProductoDeseado(self, request):
+        usuario_id = request.data.get('usuario_id')
+        producto_id = request.data.get('producto_id')
+        if not usuario_id or not producto_id:
+            return Response({'error': 'Debes enviar usuario_id y producto_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            producto = Producto.objects.get(pk=producto_id)
+            deseado, created = ProductoDeseado.objects.get_or_create(usuario=usuario, producto=producto)
+            if created:
+                return Response({'message': 'Producto agregado a deseos exitosamente'}, status=201)
+            else:
+                return Response({'message': 'El producto ya está en la lista de deseos'}, status=200)
+        except (Usuario.DoesNotExist, Producto.DoesNotExist):
+            return Response({'error': 'Usuario o Producto no encontrado'}, status=404)
+    
+    @action(detail=False, methods=['DELETE'])
+    def EliminarProductoDeseado(self, request):
+        usuario_id = request.data.get('usuario_id')
+        producto_id = request.data.get('producto_id')
+        if not usuario_id or not producto_id:
+            return Response({'error': 'Debes enviar usuario_id y producto_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            producto = Producto.objects.get(pk=producto_id)
+            deseado = ProductoDeseado.objects.filter(usuario=usuario, producto=producto).first()
+            if deseado:
+                deseado.delete()
+                return Response({'message': 'Producto eliminado de deseos exitosamente'}, status=200)
+            else:
+                return Response({'message': 'El producto no está en la lista de deseos'}, status=404)
+        except (Usuario.DoesNotExist, Producto.DoesNotExist):
+            return Response({'error': 'Usuario o Producto no encontrado'}, status=404)
 
 class tipoCategoriaViewSet(viewsets.ModelViewSet):
     queryset = tipoCategoria.objects.all()
@@ -57,17 +137,173 @@ class CarritoViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [authentication.BasicAuthentication,]
 
+    @action(detail=False, methods=['post'])
+    def AgAlCarrito(request):
+        if request.method == 'POST':
+            usuario_id = request.data.get('usuario_id')
+            producto_id = request.data.get('producto_id')
+            unidades = request.data.get('unidades', 1)
+            if not usuario_id or not producto_id:
+                return Response({'error': 'Debes enviar usuario_id y producto_id'}, status=400)
+            try:
+                usuario = Usuario.objects.get(pk=usuario_id)
+                producto = Producto.objects.get(pk=producto_id)
+                carrito, created = Carrito.objects.get_or_create(usuario=usuario, producto=producto)
+                if created:
+                    carrito.unidades = unidades
+                    carrito.valortotal = producto.Precio * unidades
+                    carrito.save()
+                    return Response({'message': 'Producto agregado al carrito exitosamente'}, status=201)
+                else:
+                    carrito.unidades += unidades
+                    carrito.valortotal += producto.Precio * unidades
+                    carrito.save()
+                    return Response({'message': 'Producto actualizado en el carrito'}, status=200)
+            except (Usuario.DoesNotExist, Producto.DoesNotExist):
+                return Response({'error': 'Usuario o Producto no encontrado'}, status=404)
+        return Response({'error': 'Método no permitido'}, status=405)
+
 class TiendaViewSet(viewsets.ModelViewSet):
     queryset = Tienda.objects.all()  # Assuming you want to list products in the store
-    serializer_class = ProductoSerializer
+    serializer_class = TiendaSerializer 
     permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
 
+    @action(detail=False, methods=['get'])
+    def buscar(self, request):
+        nombre = request.query_params.get('nombre', None)
+        if nombre:
+            tiendas = Tienda.objects.filter(nombre__icontains=nombre)
+        else:
+            tiendas = Tienda.objects.all()
+        serializer = self.get_serializer(tiendas, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def ObtenerImgNomTiendaPorProducto(self, request):
+        producto_id = request.query_params.get('producto_id')
+        if not producto_id:
+            return Response({'error': 'Debes enviar producto_id'}, status=400)
+        try:
+            producto = Producto.objects.get(pk=producto_id)
+            tienda = producto.tienda
+            data = {
+                'nombre': tienda.NomTienda,
+                'imagen': tienda.Logo.url if tienda.Logo else None
+            }
+            return Response(data)
+        except Producto.DoesNotExist:
+            return Response({'error': 'Producto no encontrado'}, status=404)
+        except AttributeError:
+            return Response({'error': 'El modelo Tienda debe tener un campo imagen'}, status=500)
+        
+    @action(detail=False, methods=['post'])
+    def CrearTienda(self, request):
+        propietario_id = request.data.get('propietario_id')
+        nombre_tienda = request.data.get('nombre_tienda')
+        descripcion_tienda = request.data.get('descripcion_tienda', '')
+        logo = request.FILES.get('logo', None)
+
+        if not propietario_id or not nombre_tienda:
+            return Response({'error': 'Debes enviar propietario_id y nombre_tienda'}, status=400)
+
+        try:
+            propietario = Usuario.objects.get(pk=propietario_id)
+            tienda, created = Tienda.objects.get_or_create(Propietario=propietario, NomTienda=nombre_tienda)
+            if created:
+                tienda.DescripcionTienda = descripcion_tienda
+                tienda.Logo = logo
+                tienda.save()
+                return Response({'message': 'Tienda creada exitosamente'}, status=201)
+            else:
+                return Response({'message': 'La tienda ya existe'}, status=200)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def ObtenerDetallesTienda(self, request):
+        tienda_id = request.query_params.get('tienda_id')
+        if not tienda_id:
+            return Response({'error': 'Debes enviar tienda_id'}, status=400)
+        try:
+            tienda = Tienda.objects.get(pk=tienda_id)
+            serializer = self.get_serializer(tienda)
+            return Response(serializer.data)
+        except Tienda.DoesNotExist:
+            return Response({'error': 'Tienda no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
 class SeguimientoTiendaViewSet(viewsets.ModelViewSet):
     queryset = SeguimientoTienda.objects.all()  # Assuming you want to track products in the store
-    serializer_class = ProductoSerializer
+    serializer_class = SeguimientoTiendaSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = [authentication.BasicAuthentication,]
+
+    @action(detail=False, methods=['get'])
+    def ObtenerListaTiendasSeguidasPorUsuario(self, request):
+        usuario_id = request.query_params.get('usuario_id')
+        if not usuario_id:
+            return Response({'error': 'Debes enviar usuario_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            tiendas_seguidas = SeguimientoTienda.objects.filter(usuario=usuario)
+            serializer = self.get_serializer(tiendas_seguidas, many=True)
+            return Response(serializer.data)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=404)
+        
+    @action(detail=False, methods=['get'])
+    def ObtenerListaUsuarioQueSiguenTienda(self, request, pk=None):
+        tienda_id = request.query_params.get('tienda_id')
+        if not tienda_id:
+            return Response({'error': 'Debes enviar tienda_id'}, status=400)    
+        try:
+            tienda = Tienda.objects.get(pk=tienda_id)
+            seguidores = SeguimientoTienda.objects.filter(tienda=tienda)
+            serializer = self.get_serializer(seguidores, many=True)
+            return Response(serializer.data)
+        except Tienda.DoesNotExist:
+            return Response({'error': 'Tienda no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'])   
+    def AgregarSeguimientoTienda(self, request):
+        usuario_id = request.data.get('usuario_id')
+        tienda_id = request.data.get('tienda_id')
+        if not usuario_id or not tienda_id:
+            return Response({'error': 'Debes enviar usuario_id y tienda_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            tienda = Tienda.objects.get(pk=tienda_id)
+            seguimiento, created = SeguimientoTienda.objects.get_or_create(usuario=usuario, tienda=tienda)
+            #Subir la cantidad de seguidores de la tienda
+            if seguimiento.tienda:
+                seguimiento.tienda.CantidadSeguidores += 1
+                seguimiento.tienda.save()
+            if created:
+                return Response({'message': 'Ahora sigues la tienda exitosamente'}, status=201)
+            else:
+                return Response({'message': 'Ya sigues esta tienda'}, status=200)
+        except (Usuario.DoesNotExist, Tienda.DoesNotExist):
+            return Response({'error': 'Usuario o Tienda no encontrado'}, status=404)
+
+    @action(detail=False, methods=['DELETE'])
+    def DejarDeSeguirTienda(self, request):
+        usuario_id = request.data.get('usuario_id')
+        tienda_id = request.data.get('tienda_id')
+        if not usuario_id or not tienda_id:
+            return Response({'error': 'Debes enviar usuario_id y tienda_id'}, status=400)
+        try:
+            usuario = Usuario.objects.get(pk=usuario_id)
+            tienda = Tienda.objects.get(pk=tienda_id)
+            seguimiento = SeguimientoTienda.objects.filter(usuario=usuario, tienda=tienda).first()
+            if seguimiento:
+                seguimiento.delete()
+                return Response({'message': 'Has dejado de seguir la tienda exitosamente'}, status=200)
+            else:
+                return Response({'message': 'No estabas siguiendo esta tienda'}, status=404)
+        except (Usuario.DoesNotExist, Tienda.DoesNotExist):
+            return Response({'error': 'Usuario o Tienda no encontrado'}, status=404)
+
+            
 
 class LoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
@@ -101,35 +337,3 @@ class LogoutView(views.APIView):
         # Devolvemos la respuesta al cliente
         return response.Response({'message':'Sessión Cerrada y Token Eliminado !!!!'},status=status.HTTP_200_OK)
 
-#%@api_view(['POST'])
-def AgAlCarrito(request):
-    # Obtén los datos del request (enviados desde Postman)
-    usuario_id = request.data.get('usuario_id')
-    producto_id = request.data.get('producto_id')
-    unidades = request.data.get('unidades', 1)  # Default: 1
-
-    # Valida que existan el usuario y el producto
-    try:
-        usuario = Usuario.objects.get(pk=usuario_id)
-        producto = Producto.objects.get(pk=producto_id)
-    except (Usuario.DoesNotExist, Producto.DoesNotExist):
-        return Response(
-            {'error': 'Usuario o Producto no encontrado'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Crea o actualiza el item en el carrito
-    item_carrito, creado = Carrito.objects.get_or_create(
-        usuario=usuario,
-        producto=producto,
-        defaults={'unidades': unidades}
-    )
-
-    if not creado:
-        item_carrito.unidades += unidades
-        item_carrito.save()
-
-    return Response(
-        {'mensaje': 'Producto agregado al carrito', 'item_id': item_carrito.id},
-        status=status.HTTP_201_CREATED
-    )

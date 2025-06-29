@@ -1,21 +1,12 @@
 from django.db import models 
 import datetime
 
+class tipoCategoria(models.Model):
+    NomCat = models.CharField(max_length=100, primary_key= True, verbose_name='Nombre de Categoria')
+
+    def __str__(self):
+        return self.NomCat
 # Create your models here.
-
-class Producto(models.Model):
-    Nomprod = models.CharField(max_length=200)
-    DescripcionProd = models.CharField(blank=True, max_length=200)
-    Stock = models.PositiveIntegerField(default=0)
-    FotoProd = models.ImageField(null=True, blank=True, upload_to='images/')
-    Precio = models.DecimalField(max_digits=10, decimal_places=2)
-    Categoria = models.CharField(max_length=100, blank=True)        
-    Estado = models.BooleanField(default=False)  
-    FechaPub = models.DateTimeField(default=datetime.datetime.now)
-    # create_at = models.DateTimeField(default=datetime.datetime.now)
-    def __str__ (self):
-        return self.Nomprod
-
 class Persona(models.Model):
     correo = models.EmailField('Correo', blank=True)
     contraseña = models.CharField('Contraseña', max_length = 100)
@@ -34,6 +25,32 @@ class Administrador(Persona):
 
     def __str__(self):  
         return '{0}'.format(self.correo)
+    
+class Tienda(models.Model):
+    Propietario = models.ForeignKey(Usuario, on_delete=models.CASCADE, verbose_name='Propietario', null=False,unique=True)
+    NomTienda = models.CharField(max_length=200)
+    Logo = models.ImageField(null=True, blank=True, upload_to='logos/')
+    DescripcionTienda = models.TextField(blank=True)
+    Cant_productos = models.PositiveIntegerField(default=0)
+    Cant_seguidores = models.PositiveIntegerField(default=0)    
+
+    def __str__(self):
+        return self.NomTienda
+
+class Producto(models.Model):
+    Nomprod = models.CharField(max_length=200)
+    DescripcionProd = models.CharField(blank=True, max_length=200)
+    Stock = models.PositiveIntegerField(default=0)
+    FotoProd = models.ImageField(null=True, blank=True, upload_to='images/')
+    Precio = models.DecimalField(max_digits=10, decimal_places=2)
+    tipoCategoria = models.ForeignKey('tipoCategoria', on_delete=models.CASCADE, verbose_name='Tipo de Categoria', null=False)   
+    Estado = models.BooleanField(default=False)  
+    FechaPub = models.DateTimeField(default=datetime.datetime.now)
+    tienda= models.ForeignKey(Tienda, on_delete=models.CASCADE, verbose_name='Tienda', null=False)
+    # create_at = models.DateTimeField(default=datetime.datetime.now)
+    def __str__ (self):
+        return self.Nomprod
+
 
 class Venta(models.Model):
     comprador = models.ForeignKey(Usuario, on_delete=models.CASCADE, verbose_name='Usuario', null=False)
@@ -61,17 +78,6 @@ class ProductoDeseado(models.Model):
         indexes = [
                 models.Index(fields=['usuario', 'producto',]),
             ]
-
-class Tienda(models.Model):
-    Propietario = models.ForeignKey(Usuario, on_delete=models.CASCADE, verbose_name='Propietario', null=False)
-    NomTienda = models.CharField(max_length=200)
-    Logo = models.ImageField(null=True, blank=True, upload_to='logos/')
-    DescripcionTienda = models.TextField(blank=True)
-    Cant_productos = models.PositiveIntegerField(default=0)
-    Cant_seguidores = models.PositiveIntegerField(default=0)
-
-    def __str__(self):
-        return self.NomTienda
     
 class SeguimientoTienda(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, verbose_name='Usuario', null=False)
@@ -101,8 +107,3 @@ class Carrito(models.Model):
                 models.Index(fields=['usuario', 'producto',]),
             ]
         
-class tipoCategoria(models.Model):
-    NomCat = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.NomCat
